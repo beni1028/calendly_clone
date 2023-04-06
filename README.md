@@ -68,6 +68,7 @@ The following APIs are available in this project:
 - Add barebone UI using react
 - Auto-creating backups of dB
 - Logging 
+- Add an entrypoint script for auto migrations
  
 
 
