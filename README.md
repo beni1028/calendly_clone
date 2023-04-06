@@ -64,7 +64,7 @@ The following APIs are available in this project:
 | POST|`/accounts/event-slots/<slug>` | Send selected slot to book |
 | POST|`/accounts/oauth2callback/` | Send activation code from front-end to verify and login user. Returns a token |
 
-##TODO
+## TODO
 - Add barebone UI using react
 - Auto-creating backups of dB
 - Logging 
