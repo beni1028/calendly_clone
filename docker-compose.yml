@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+
+  app:
+    restart: always
+    container_name: apexive_demo
+    build:
+      context: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - pgdb
+      - redis
+
+  pgdb:
+    container_name: pgdb
+    image: postgres
+    volumes:
+      - .:/var/lib/postgresql/data
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: apexive_demo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/postgres/
+  
+  redis:
+    container_name: redis
+    restart: always
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  celery-worker:
+    container_name: celery_worker
+    restart: always
+    build:
+      context: .
+
+    command: celery -A scheduler worker -P gevent -l info
+    environment:
+      - DEBUG=1
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379:0
+    depends_on:
+      - redis
+    volumes:
+      - .:/usr/src/app/
+
+  celery-beat:
+    container_name: celery_beat
+    restart: always
+    build:
+      context: .
+    command: celery -A scheduler beat -l info
+    depends_on:
+      - redis
+      - celery-worker
+    volumes:
+      - .:/usr/src/app/
+
+  flower:
+    container_name: flower_ecommerce
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=8888
+    ports:
+      - 8888:8888
