@@ -8,10 +8,11 @@ from accounts.models import WebhookToken
 
 
 class Webhook:
+    model = WebhookToken
+
     def __init__(self, url_path, lookup_field=None):
         self.url_path = url_path
         self.lookup_field = lookup_field
-        self.model = WebhookToken
 
     def __call__(self, cls):
         self.view_name = cls.__name__
@@ -26,11 +27,13 @@ class Webhook:
             self.model.objects.create(name=self.view_name,
                                       url=self.url_path,
                                       lookup_field=self.lookup_field)
-
-    def generate_token_and_url_path(self, url_path):
-        token = self.model.objects.get(url_path=url_path)
-        return token.token
-
+    
+    @staticmethod
+    def generate_token_and_url_path(url_path, lookup_id=None):
+        token = WebhookToken.objects.get(url=url_path)
+        if lookup_id:
+            url_path = url_path.replace('<' + token.lookup_field + '>', str(lookup_id))
+        return f'Token {token.key}', url_path
 
 def get_authorization_header(request):
     """
@@ -88,8 +91,8 @@ class WebhooksAuthentication(TokenAuthentication):
         except model.DoesNotExist:
             raise exceptions.AuthenticationFailed(('Invalid token.'))
 
-        if token.url not in request.build_absolute_uri():
-            raise exceptions.AuthenticationFailed(('Invalid Authorizatin.'))
+        # if token_obj.url not in request.build_absolute_uri():
+        #     raise exceptions.AuthenticationFailed(('Invalid Authorizatin.'))
         print(token_obj.url, token_obj, reverse(
             "accounts:calendareventwebhookview",
             args=[self.get_detail(request, token_obj)]))
