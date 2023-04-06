@@ -1,3 +1,5 @@
+from django.shortcuts import get_object_or_404
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -5,7 +7,7 @@ from scheduler.hook_authentication import Webhook
 
 from accounts.models import CalendarEvents
 
-@Webhook(url_path='accounts/webhook/event-update/<uid>/', lookup_field="uid")
+@Webhook(url_path='/accounts/webhook/event-update/<uid>/', lookup_field="uid")
 class CalendarEventWebhookView(APIView):
 
     def post(self, request, uid):
@@ -20,8 +22,9 @@ class CalendarEventWebhookView(APIView):
             - cancelled=True assurse no call made to google. 
         5. Store event info 
         '''
+
+        calendar_event = get_object_or_404(CalendarEvents, uid=uid)
         try:
-            calendar_event = CalendarEvents.objects.get(uid=uid)
             calendar_event.sync_calendar(headers=request.headers)
             return Response(status=200)
 
