@@ -20,7 +20,6 @@ class CalendarEventWebhookView(APIView):
             - cancelled=True assurse no call made to google. 
         5. Store event info 
         '''
-        print(uid)
         try:
             calendar_event = CalendarEvents.objects.get(uid=uid)
             calendar_event.sync_calendar(headers=request.headers)
