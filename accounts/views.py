@@ -3,6 +3,7 @@ import requests
 from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets, views, response, status
+from rest_framework.permissions import AllowAny
 
 from .models import Events, CalendarEvents
 from .calendar import GoogleCalendar
@@ -16,6 +17,7 @@ class EventsViewSet(viewsets.ModelViewSet):
 
 
 class GoogleCallBackView(views.APIView):
+    authentication_classes = permission_classes  = [AllowAny]
 
     def get(self, request):
         try:
@@ -33,6 +35,7 @@ class GoogleCallBackView(views.APIView):
 
 
 class BookingView(views.APIView):
+    authentication_classes = permission_classes = []
 
     def post(self, request, slug):
         event = get_object_or_404(Events, slug=slug)
