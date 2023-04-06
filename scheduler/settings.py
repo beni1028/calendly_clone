@@ -15,6 +15,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MODE = os.environ.get("MODE", 'local')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -23,9 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-a35!1+s80qvp6)ndp8fdxoi(0^v0*l4xc%c_!8g)cz6kh#ag%l'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False if MODE == 'prod' else True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*", ".ngrok.io"]
 
 
 # Application definition
@@ -82,12 +83,29 @@ WSGI_APPLICATION = 'scheduler.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if MODE == 'prod':
+    DATABASES = {
+        "default": {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ.get("DB_NAME"),
+            'USER': os.environ.get("DB_USER"),
+            'PASSWORD': os.environ.get("DB_PASSWORD"),
+            'HOST': os.environ.get("DB_HOST"),
+            'PORT': os.environ.get("DB_PORT")
+        }
     }
-}
+else:
+    #db on docker
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql_psycopg2",
+            "NAME": "apexive_demo",
+            "USER": "postgres",
+            "PASSWORD": "postgres",
+            "HOST": "pgdb",
+            "PORT": "5432",
+        }
+    }
 
 
 # Password validation
@@ -141,15 +159,18 @@ CORS_ALLOWED_ORGINS = ["*"]
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 100,
+    'PAGE_SIZE': 20,
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication'
     ],
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
+CELERY_BROKER_URL = 'redis://redis:6379'
+CELERY_RESULT_BACKEND = 'redis://redis:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
@@ -159,8 +180,11 @@ CELERY_TIMEZONE = 'Asia/Kolkata'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 DJANGO_CELERY_BEAT_TZ_AWARE = False
 
-GOOGLE_TOKEN_URL = "https://accounts.google.com/o/oauth2/token"
-GOOGLE_OAUTH_CLIENT_ID = "145373107593-idm4tsav2prfhs4u2nht08t7brh3e6c0.apps.googleusercontent.com"
-GOOGLE_OAUTH_CLIENT_SECRET = "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"
+GOOGLE_TOKEN_URL = os.environ.get("GOOGLE_TOKEN_URL", "https://accounts.google.com/o/oauth2/token") # this is generic might not bw need in env
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "")
 
-BACKEND_URL = "localhost:8000"
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
+
+# Temporay email backend
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
