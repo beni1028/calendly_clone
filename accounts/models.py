@@ -5,8 +5,10 @@ import random, string
 
 from django.db import models
 from django.utils import timezone
-from django_celery_beat.models import PeriodicTask
+from django.utils.text import slugify
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+
+from django_celery_beat.models import PeriodicTask
 
 
 class MyAccountManager(BaseUserManager):
@@ -110,9 +112,12 @@ class Events(models.Model):
     duration        = models.IntegerField()
     slug            = models.SlugField(unique=True)
     location        = models.URLField(blank=True, null=True)
+
     invitees        = models.JSONField(null=True, blank=True)
+    reminders       = models.JSONField(null=True, blank=True) # {"email":[5,10,15,20]}
     availabilty     = models.JSONField()  #{start_dt: end_dt}
     slots           = models.JSONField(null=True, blank=True)
+
     created_by      = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
     deleted_at      = models.DateTimeField(blank=True, null=True)
@@ -124,11 +129,7 @@ class Events(models.Model):
 
     def generate_slug(self):
         random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-        title = re.sub(
-            r'[^a-zA-Z0-9 ]+', '', self.title
-            ).replace(' ', '-').lower()
-
-        return f"{title}-{random_string}"
+        return slugify(f"{title}-{random_string}")
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -138,7 +139,7 @@ class Events(models.Model):
         if not old_obj:
             self.generate_slug()
             self._create_slots()
-        print(len(self.slots))
+
         super().save(*args, **kwargs)
         return
 
@@ -214,11 +215,15 @@ class CalendarEvents(models.Model):
     webhook_data        = models.JSONField(blank=True, null=True)
 
     def __str__(self):
-        return self.event.title
+        return str(self.id) 
 
-    def save(self, *args, **kwargs):
+    def save(self, call_super=False, *args, **kwargs):
+        if call_super:
+            super().save()
+            return
+
         from accounts.tasks import create_calender_event
-        super().save()
+        super().save(*args, **kwargs)
         print("here")
         # create_calender_event.delay(self.id)
         create_calender_event(self.id)
@@ -229,12 +234,9 @@ class CalendarEvents(models.Model):
 
         from .tasks import delete_event_from_calendar
         delete_event_from_calendar(self.id)
-
-        # clean up event data and mark it deleted
-        self.location = self.event_id = self.event_link =\
-            self.webhook_uid = self.webhook_data = None
         self.deleted_at = timezone.now()
         super().save()
+
 
     def generate_webhook_uid(self):
         timestamp = str(int(timezone.now().timestamp()))
@@ -252,7 +254,7 @@ class CalendarEvents(models.Model):
             return
 
         calendar_client = GoogleCalendar(self.event.created_by.calendar_auth)
-        event = calendar_client.retrieve_calendar_event(self.event_id)
+        event = calendar_client.retrieve_calendar_event(self.uid)
         self.calendar_response_data = event
         if event.get("status") == 'cancelled':
             self.delete()
