@@ -82,7 +82,7 @@ class BookingView(views.APIView):
 
         remove_slots = {start_datetime: end_datetime}
 
-        update_slots(slug, remove_slots, add_slots_back)
+        update_slots.delay(slug, remove_slots, add_slots_back)
 
         return response.Response(
                                 {"message": "Your slot was booked successfully"},
