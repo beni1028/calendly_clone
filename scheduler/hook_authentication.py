@@ -15,7 +15,10 @@ class Webhook:
 
     def __call__(self, cls):
         self.view_name = cls.__name__
-        self.generate_token()
+        try:
+            self.generate_token()
+        except:
+            pass
         cls.authentication_classes = [WebhooksAuthentication]
         cls.permission_classes = []
         return cls
