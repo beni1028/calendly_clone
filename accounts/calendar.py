@@ -268,12 +268,12 @@ class GoogleCalendar():
         '''
         Reference: https://developers.google.com/calendar/api/guides/push
         '''
-        url_path = 'accounts/webhook/event-update/<uid>/'
+        url_path = '/accounts/webhook/event-update/<uid>/'
         auth_header, final_url_path = Webhook.generate_token_and_url_path(url_path=url_path,lookup_id=event_id)
 
 
-        # callback_url = f'https://3052-49-43-242-30.in.ngrok.io/{final_url_path}'
-        callback_url = f'{settings.BACKEND_URL}/{final_url_path}'
+        # callback_url = f'https://be81-49-43-242-30.in.ngrok.io/{final_url_path}'
+        callback_url = f'{settings.BACKEND_URL}{final_url_path}'
         print(callback_url,"callback_url")
         try:
             service = self.get_calendar_service()
