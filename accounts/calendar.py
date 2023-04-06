@@ -6,7 +6,7 @@ from typing import List, Dict
 from django.conf import settings
 from django.utils import timezone as tz
 
-from scheduler.hook_authentication import WebhookToken
+from scheduler.hook_authentication import Webhook
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -152,11 +152,11 @@ class GoogleCalendar():
                 else event.get("hangoutLink"),
             }
 
-        except Exception as e:
-            print("Exception came while creating event: ", e)
+        except Exception as err:
+            print("Exception came while creating event: ", err)
             return {
                 'created': False,
-                'error': e
+                'error': err
             }
 
     def retrieve_calendar_event(self, event_id):
@@ -167,11 +167,11 @@ class GoogleCalendar():
             event.update({'read': True, 'event_id': event_id})
             return event
 
-        except Exception as e:
-            print("Exception came while retrieving event: ", e)
+        except Exception as err:
+            print("Exception came while retrieving event: ", err)
             return {
                 'read': False,
-                'error': e
+                'error': err
             }
 
     def update_calendar_event(self, event_id, event_data):
@@ -190,11 +190,11 @@ class GoogleCalendar():
                 'event_id': event_id
             }
 
-        except Exception as e:
-            print("Exception came while updating event: ", e)
+        except Exception as err:
+            print("Exception came while updating event: ", err)
             return {
                 'updated': False,
-                'error': e
+                'error': err
             }
 
     def delete_calendar_event(self, event_id):
@@ -208,14 +208,14 @@ class GoogleCalendar():
                 'deleted': True,
                 'event_id': event_id
             }
-        except Exception as e:
-            print("Exception came while deleting the event: ", e)
+        except Exception as err:
+            print("Exception came while deleting the event: ", err)
 
             # It can happen that the resouce is already deleted,
             # deleting in that case throws an error
             already_deleted = False
             try:
-                content = e.__dict__.get('content')
+                content = err.__dict__.get('content')
                 body = json.loads(content)
                 if body.get('error').get('code') == 410:
                     already_deleted = True
@@ -225,7 +225,7 @@ class GoogleCalendar():
             return {
                 'deleted': False,
                 'already_deleted': already_deleted,
-                'error': e
+                'error': err
             }
 
     def is_events_list(self, datetime_min, datetime_max, timeZone=None, **kwargs):
@@ -257,32 +257,34 @@ class GoogleCalendar():
                 "events": event_timings
             }
 
-        except Exception as e:
-            print("Exception came while trying to find a free slot, error: ", e)
+        except Exception as err:
+            print("Exception came while trying to find a free slot, error: ", err)
             return {
                 'success': False,
-                'error': e
+                'error': err
             }
 
-    def activate_webhook(self, event_id, unique_id, start_time):
+    def activate_webhook(self, event_id, webhook_id, start_time):
         '''
         Reference: https://developers.google.com/calendar/api/guides/push
         '''
         url_path = 'accounts/webhook/event-update/<uid>/'
-        token = get_token_(url_path)
+        auth_header, final_url_path = Webhook.generate_token_and_url_path(url_path=url_path,lookup_id=event_id)
 
 
-        callback_url = f"{settings.BACKEND_URL}events/webhook/event-update/{event_id}/"
+        # callback_url = f'https://3052-49-43-242-30.in.ngrok.io/{final_url_path}'
+        callback_url = f'{settings.BACKEND_URL}/{final_url_path}'
+        print(callback_url,"callback_url")
         try:
             service = self.get_calendar_service()
             body = {
-                'id': unique_id,
+                'id': webhook_id,
                 'type': 'webhook',
                 'address': callback_url,
                 'expiration': int((start_time).timestamp() * 1000),
                 'payload': True,
                 'params': {
-                    'auth_token': settings.GOOGLE_CALENDAR_EVENT_WEBHOOK_TOKEN,
+                    'auth_token': auth_header,
                 },
                 'ttl': 3600,
                 'channel': {
