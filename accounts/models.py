@@ -129,7 +129,7 @@ class Events(models.Model):
 
     def generate_slug(self):
         random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-        return slugify(f"{title}-{random_string}")
+        self.slug = slugify(f"{self.title}-{random_string}")
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -225,8 +225,7 @@ class CalendarEvents(models.Model):
         from accounts.tasks import create_calender_event
         super().save(*args, **kwargs)
         print("here")
-        # create_calender_event.delay(self.id)
-        create_calender_event(self.id)
+        create_calender_event.delay(self.id)
 
     def delete(self, *args, **kwargs):
         # disable all the associated tasks (reminders/follow-ups)
