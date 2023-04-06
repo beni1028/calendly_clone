@@ -23,7 +23,7 @@ app.autodiscover_tasks()
 def debug_task(self):
     print(f'Request: {self.request!r}')
 
-def create_perodic_event(task_func, task_name, scheduled_at, task_kwargs, one_off=True):
+def create_perodic_task(task_func, task_name, scheduled_at, task_kwargs, one_off=True):
     from django_celery_beat.models import ClockedSchedule , PeriodicTask
 
     clocked, _ = ClockedSchedule.objects.get_or_create(
