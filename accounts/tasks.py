@@ -84,7 +84,7 @@ def create_calender_event(calender_event_id):
         if not web_hook_response.get("success"):
             calendar_event.webhook_uid = None
     super(calendar_event.__class__, calendar_event).save()
-    # trigger reminders
+    schedule_reminders(calender_event.id, event.reminders)
     return True
 
 @shared_task
