@@ -1,7 +1,6 @@
 from django.conf import settings
-from django.urls import reverse
+from django.urls import resolve, reverse, exceptions as resolver_exception
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.reverse import reverse
 from rest_framework import HTTP_HEADER_ENCODING, exceptions
 
 from accounts.models import WebhookToken
@@ -18,16 +17,22 @@ class Webhook:
         self.view_name = cls.__name__
         self.generate_token()
         cls.authentication_classes = [WebhooksAuthentication]
+        cls.permission_classes = []
         return cls
 
+    def check_if_create(self):
+        create = False
+        if not self.model.objects.filter(name=self.view_name).exists()\
+        and not self.model.objects.filter(name=self.view_name).exists():
+            create = True
+        return create
+
     def generate_token(self):
-        if not self.model.objects.filter(name=self.view_name,
-                                         url=self.url_path,
-                                         lookup_field=self.lookup_field).exists():
+        if self.check_if_create():
             self.model.objects.create(name=self.view_name,
                                       url=self.url_path,
                                       lookup_field=self.lookup_field)
-    
+
     @staticmethod
     def generate_token_and_url_path(url_path, lookup_id=None):
         token = WebhookToken.objects.get(url=url_path)
@@ -86,16 +91,25 @@ class WebhooksAuthentication(TokenAuthentication):
 
     def authenticate_credentials(self, key, request):
         model = self.get_model()
+        print(key)
         try:
             token_obj = model.objects.get(key=key)
         except model.DoesNotExist:
-            raise exceptions.AuthenticationFailed(('Invalid token.'))
+            raise exceptions.AuthenticationFailed(('Invalid 7777token.'))
 
-        # if token_obj.url not in request.build_absolute_uri():
-        #     raise exceptions.AuthenticationFailed(('Invalid Authorizatin.'))
-        print(token_obj.url, token_obj, reverse(
-            "accounts:calendareventwebhookview",
-            args=[self.get_detail(request, token_obj)]))
+        try:
+            resolver_match = resolve(request.path)
+        except resolver_exception.Resolver404:
+            raise exceptions.AuthenticationFailed(('Invalid path.'))
+
+        try:
+            args = []
+            if token_obj.lookup_field:
+                args=[resolver_match.kwargs[token_obj.lookup_field]]
+            reverse("accounts:"+resolver_match.url_name,
+            args=args)
+        except Exception:
+            raise exceptions.AuthenticationFailed(('Invalid reverse.'))
         return (token_obj.url, token_obj)
 
 def get_token(url_path):
