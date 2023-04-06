@@ -78,7 +78,6 @@ class BookingView(views.APIView):
             calendar_event.save()
 
         remove_slots = {start_datetime: end_datetime}
-        print(remove_slots,"ttttttttttttttttttttttttttttttt")
 
         update_slots(slug, remove_slots, add_slots_back)
 
